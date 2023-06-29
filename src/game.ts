@@ -1,17 +1,26 @@
 import * as PIXI from "pixi.js";
 
 let pipsi: PIXI.Sprite;
-const carrots: PIXI.Sprite[] = [];
+let carrots: PIXI.Sprite[] = [];
 let level = 1;
 
 let pause = false;
-let numCarrots = 10;
-let speed = 5;
+let numCarrots = 7;
+let INITIAL_SPEED = 1;
+// let INITIAL_NUM_CARROTS = 7;
+let speed = INITIAL_SPEED;
+let ENERGY_LOSS_FACTOR = 0.001;
+let CARROT_ENERGY_BOOST_FACTOR = 0.2;
+let levelScore = 0;
+let energyLevel = 1;
 
 let levelText: PIXI.Text;
 let scoreText: PIXI.Text;
+let resultText: PIXI.Text;
+
+let maxScore = 0;
 let score = 0;
-let finished = false;
+let isLevelCompleted = false;
 
 function checkCollision() {
   const rectA = pipsi.getBounds();
@@ -25,11 +34,19 @@ function checkCollision() {
       rectA.y + rectA.height > rectB.y &&
       rectA.y < rectB.y + rectB.height
     ) {
+      energyLevel = Math.min(
+        energyLevel + CARROT_ENERGY_BOOST_FACTOR * carrots[i].scale.x,
+        1
+      );
       carrots[i].destroy();
       carrots.splice(i, 1);
       i--;
 
       score++;
+      levelScore++;
+      if (score > maxScore) {
+        maxScore = score;
+      }
       updateScore();
     }
   }
@@ -38,19 +55,29 @@ function checkCollision() {
 const audio = new Audio("control-seq.mp3");
 audio.loop = true;
 
-function finish() {
-  scoreText.text = "Well done! Click to continue";
-  finished = true;
-  // audio.pause();
-  // audio.currentTime = 0;
-}
-
 function updateScore() {
-  scoreText.text = "Carrots: " + (numCarrots - score);
-  if (score === numCarrots) {
-    finish();
+  scoreText.text =
+    "Score: " + score + (maxScore > score ? " (High: " + maxScore + ")" : "");
+  if (levelScore === numCarrots) {
+    showResult("Level completed!\nTap to continue");
+    isLevelCompleted = true;
+    // audio.pause();
+    // audio.currentTime = 0;
   }
 }
+
+const textStyle = new PIXI.TextStyle({
+  dropShadow: true,
+  dropShadowAngle: 0,
+  dropShadowBlur: 3,
+  dropShadowColor: "#000000",
+  dropShadowDistance: 0,
+
+  fontFamily: "Arial",
+  fontSize: 24,
+  fill: 0xffffff,
+  align: "center",
+});
 
 function initCarrots(app: PIXI.Application) {
   for (let i = 0; i < numCarrots; i++) {
@@ -69,129 +96,203 @@ function updateLevelText() {
   levelText.text = "Level: " + level;
 }
 
-function startNextLevel(app: PIXI.Application) {
-  audio.playbackRate = 1 + 0.5 * level;
+function startLevel() {
+  resultText.visible = false;
   audio.play();
-  level++;
+
   updateLevelText();
-  numCarrots = level * 10;
-  speed = 5 + (level - 1) * 2;
+  // numCarrots = INITIAL_NUM_CARROTS + (level - 1) * 2;
+  audio.playbackRate = 1 + 0.05 * level;
+  speed = INITIAL_SPEED + (level - 1) * 0.25;
   initCarrots(app);
-  finished = false;
-  score = 0;
+  isLevelCompleted = false;
+  levelScore = 0;
   updateScore();
   for (const carrot of carrots) {
     app.stage.addChild(carrot);
   }
 }
 
-export function startGame(container: HTMLElement) {
-  const app = new PIXI.Application({background: "#10909e", resizeTo: window});
+const app = new PIXI.Application({
+  // antialias: true,
+  background: "#10909e",
+  resizeTo: window,
+});
 
+const background = PIXI.Sprite.from("bg_grass.jpg");
+
+background.width = app.screen.width;
+background.height = app.screen.height;
+background.alpha = 0.125;
+app.stage.addChild(background);
+
+scoreText = new PIXI.Text("", {
+  ...textStyle,
+  fontSize: 24,
+});
+scoreText.x = 10;
+scoreText.y = 10;
+app.stage.addChild(scoreText);
+updateScore();
+
+// Create a container for the progress bar
+const energyBarContainer = new PIXI.Container();
+energyBarContainer.x = 10;
+energyBarContainer.y = 70;
+app.stage.addChild(energyBarContainer);
+
+// Create the background rectangle
+const energyBackground = new PIXI.Graphics();
+energyBackground.beginFill(0xcccccc);
+energyBackground.drawRect(0, 0, 200, 10);
+energyBackground.endFill();
+energyBarContainer.addChild(energyBackground);
+
+// Create the progress rectangle
+const energyBar = new PIXI.Graphics();
+energyBar.beginFill(0xff0000);
+energyBar.drawRect(0, 0, 0, 10);
+energyBar.endFill();
+energyBarContainer.addChild(energyBar);
+
+// Update the progress bar
+function updateEnergyBar() {
+  const width = 200 * energyLevel;
+  energyBar.clear();
+  energyBar.beginFill(0xff0000);
+  energyBar.drawRect(0, 0, width, 10);
+  energyBar.endFill();
+}
+
+resultText = new PIXI.Text("", textStyle);
+resultText.anchor.set(0.5, 0.5);
+resultText.x = app.screen.width / 2;
+resultText.y = app.screen.height / 2;
+resultText.visible = false;
+app.stage.addChild(resultText);
+
+function showResult(text: string) {
+  resultText.text = text;
+  resultText.visible = true;
+}
+
+levelText = new PIXI.Text("", {
+  ...textStyle,
+  fontSize: 20,
+});
+levelText.x = 10;
+levelText.y = 40;
+app.stage.addChild(levelText);
+updateLevelText();
+
+initCarrots(app);
+// create a new Sprite from an image path
+pipsi = PIXI.Sprite.from("pipsi-top-100.png");
+// center the sprite's anchor point
+pipsi.anchor.set(0.5);
+pipsi.scale.set(0.35);
+pipsi.rotation += Math.PI;
+
+// move the sprite to the center of the screen
+pipsi.x = app.screen.width / 2;
+pipsi.y = app.screen.height / 2;
+
+app.stage.addChild(pipsi);
+
+// Enable interactivity!
+// app.stage.interactive = true;
+
+// Make sure the whole canvas area is interactive, not just the circle.
+// app.stage.hitArea = app.screen;
+
+app.stage.eventMode = "dynamic";
+let prevX = 0;
+
+app.stage.addEventListener("pointerdown", (event) => {
+  if (isLevelCompleted) {
+    level++;
+    startLevel();
+  } else if (energyLevel === 0) {
+    level = 1;
+    energyLevel = 1;
+    score = 0;
+    pipsi.x = app.screen.width / 2;
+    pipsi.y = app.screen.height / 2;
+    for (const carrot of carrots) {
+      carrot.destroy();
+    }
+    audio.currentTime = 0;
+    carrots = [];
+    startLevel();
+  } else {
+    prevX = event.global.x;
+    // pause = !pause;
+    // if (pause) {
+    //   audio.pause();
+    // } else {
+    //   audio.play();
+    // }
+  }
+});
+
+app.stage.on("pointermove", (event) => {
+  const dx = event.global.x - prevX;
+  prevX = event.global.x;
+  pipsi.rotation += (dx * Math.PI) / 180;
+});
+
+window.addEventListener("keydown", (e) => {
+  if (isLevelCompleted) {
+    startLevel(app);
+  }
+  switch (e.code) {
+    // case "ArrowUp":
+    //   pipsi.x += Math.cos(pipsi.rotation + Math.PI / 2) * 10;
+    //   pipsi.y += Math.sin(pipsi.rotation + Math.PI / 2) * 10;
+    //   break;
+    // case "ArrowDown":
+    //   pipsi.x -= Math.cos(pipsi.rotation + Math.PI / 2) * 10;
+    //   pipsi.y -= Math.sin(pipsi.rotation + Math.PI / 2) * 10;
+    //   break;
+    case "ArrowLeft":
+      pipsi.rotation -= Math.PI / 16;
+      break;
+    case "ArrowRight":
+      pipsi.rotation += Math.PI / 16;
+      break;
+    case "Space":
+      pause = !pause;
+      if (pause) {
+        audio.pause();
+      } else {
+        audio.play();
+      }
+      break;
+  }
+});
+
+export function startGame(container: HTMLElement) {
   container.replaceChildren(app.view as unknown as Node);
   audio.play();
-
-  const background = PIXI.Sprite.from("bg_grass.jpg");
-
-  background.width = app.screen.width;
-  background.height = app.screen.height;
-  background.alpha = 0.125;
-  app.stage.addChild(background);
-
-  // create a new Sprite from an image path
-  pipsi = PIXI.Sprite.from("pipsi-top-100.png");
-
-  scoreText = new PIXI.Text("", {
-    fontFamily: "Arial",
-    fontSize: 36,
-    fill: 0xffffff,
-  });
-  scoreText.x = 10;
-  scoreText.y = 10;
-  app.stage.addChild(scoreText);
-  updateScore();
-
-  levelText = new PIXI.Text("", {
-    fontFamily: "Arial",
-    fontSize: 24,
-    fill: 0xffffff,
-  });
-  levelText.x = 10;
-  levelText.y = 60;
-  app.stage.addChild(levelText);
-  updateLevelText();
-
-  initCarrots(app);
-
-  // center the sprite's anchor point
-  pipsi.anchor.set(0.5);
-  pipsi.scale.set(0.5);
-  pipsi.rotation += Math.PI;
-
-  // move the sprite to the center of the screen
-  pipsi.x = app.screen.width / 2;
-  pipsi.y = app.screen.height / 2;
-
-  app.stage.addChild(pipsi);
-
-  app.stage.interactive = true;
-  app.stage.on("pointerdown", () => {
-    if (finished) {
-      startNextLevel(app);
-    } else {
-      // pause = !pause;
-      // if (pause) {
-      //   audio.pause();
-      // } else {
-      //   audio.play();
-      // }
-    }
-  });
-  app.stage.on("pointermove", (event) => {
-    //filter.uniforms.mouse.copyFrom(event.global);
-    pipsi.rotation += (event.movement.x * Math.PI) / 180;
-  });
-
-  window.addEventListener("keydown", (e) => {
-    if (finished) {
-      startNextLevel(app);
-    }
-    switch (e.code) {
-      // case "ArrowUp":
-      //   pipsi.x += Math.cos(pipsi.rotation + Math.PI / 2) * 10;
-      //   pipsi.y += Math.sin(pipsi.rotation + Math.PI / 2) * 10;
-      //   break;
-      // case "ArrowDown":
-      //   pipsi.x -= Math.cos(pipsi.rotation + Math.PI / 2) * 10;
-      //   pipsi.y -= Math.sin(pipsi.rotation + Math.PI / 2) * 10;
-      //   break;
-      case "ArrowLeft":
-        pipsi.rotation -= Math.PI / 16;
-        break;
-      case "ArrowRight":
-        pipsi.rotation += Math.PI / 16;
-        break;
-      case "Space":
-        pause = !pause;
-        if (pause) {
-          audio.pause();
-        } else {
-          audio.play();
-        }
-        break;
-    }
-  });
 
   // Listen for animate update
   app.ticker.add((delta) => {
     if (pause) return;
-    if (finished) {
+    if (energyLevel === 0) return;
+    if (isLevelCompleted) {
       // just for fun, let's rotate mr rabbit a little
       // delta is 1 if running at 100% performance
       // creates frame-independent transformation
       pipsi.rotation += 0.1 * delta;
       return;
     }
+    updateEnergyBar();
+    energyLevel = Math.max(0, energyLevel - delta * speed * ENERGY_LOSS_FACTOR);
+    if (energyLevel === 0) {
+      showResult("Uff… I just got too tired!\nTap to try again");
+      audio.pause();
+    }
+
     pipsi.x += Math.cos(pipsi.rotation + Math.PI / 2) * speed * delta;
     pipsi.y += Math.sin(pipsi.rotation + Math.PI / 2) * speed * delta;
 

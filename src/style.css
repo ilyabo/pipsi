@@ -14,6 +14,10 @@
   -webkit-text-size-adjust: 100%;
 }
 
+.pipsi-photo {
+  margin-top: 30px;
+}
+
 canvas {
   position: absolute;
   top: 0;
@@ -38,8 +42,12 @@ body {
   min-height: 100vh;
 }
 
+section {
+  padding: 0 2em;
+}
+
 h1 {
-  font-size: 3.2em;
+  font-size: 2.2em;
   line-height: 1.1;
 }
 
