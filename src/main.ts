@@ -21,14 +21,11 @@ container.innerHTML = `
   <button id="start">START</button>
 `;
 
-let isPlaying = false;
-
 // startGame(container);
 
 const startButton = document.querySelector<HTMLButtonElement>("#start");
 if (startButton) {
   startButton.addEventListener("click", () => {
-    isPlaying = true;
     startGame(container);
   });
 }

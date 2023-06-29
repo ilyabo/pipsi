@@ -135,7 +135,7 @@ export function startGame(container: HTMLElement) {
   app.stage.addChild(pipsi);
 
   app.stage.interactive = true;
-  app.stage.on("pointerdown", (event) => {
+  app.stage.on("pointerdown", () => {
     if (finished) {
       startNextLevel(app);
     } else {
