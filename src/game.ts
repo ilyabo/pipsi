@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import {randomNormal} from "d3-random";
 
 let pipsi: PIXI.Sprite;
 let carrots: PIXI.Sprite[] = [];
@@ -9,10 +10,13 @@ let numCarrots = 7;
 let INITIAL_SPEED = 1;
 // let INITIAL_NUM_CARROTS = 7;
 let speed = INITIAL_SPEED;
-let ENERGY_LOSS_FACTOR = 0.001;
-let CARROT_ENERGY_BOOST_FACTOR = 0.2;
+const ENERGY_LOSS_FACTOR = 0.001;
+const ROTATION_ENERGY_COST = 0.01;
+const CARROT_SIGMA_FACTOR = 25;
+const CARROT_ENERGY_BOOST_FACTOR = 0.2;
 let levelScore = 0;
 let energyLevel = 1;
+const KEYBOARD_ROTATION_ANGLE = Math.PI / 16;
 
 let levelText: PIXI.Text;
 let scoreText: PIXI.Text;
@@ -79,12 +83,33 @@ const textStyle = new PIXI.TextStyle({
   align: "center",
 });
 
+function keepWithinBounds(x: number, y: number) {
+  const margin = 5;
+  const width = app.screen.width;
+  const height = app.screen.height;
+  if (x < margin) {
+    x = margin;
+  } else if (x > width - margin) {
+    x = width - margin;
+  }
+  if (y < margin) {
+    y = margin;
+  } else if (y > height - margin) {
+    y = height - margin;
+  }
+  return [x, y];
+}
+
 function initCarrots(app: PIXI.Application) {
   for (let i = 0; i < numCarrots; i++) {
     const carrot = PIXI.Sprite.from("carrot-100.png");
     carrot.anchor.set(0.5);
-    carrot.x = Math.random() * app.screen.width;
-    carrot.y = Math.random() * app.screen.height;
+    const [x, y] = keepWithinBounds(
+      randomNormal(app.screen.width / 2, 50 + CARROT_SIGMA_FACTOR * level)(),
+      randomNormal(app.screen.height / 2, 50 + CARROT_SIGMA_FACTOR * level)()
+    );
+    carrot.x = x;
+    carrot.y = y;
     carrot.scale.set(0.25 + Math.random() * 0.25);
     carrot.rotation = Math.random() * 2 * Math.PI;
     app.stage.addChild(carrot);
@@ -208,22 +233,26 @@ app.stage.addChild(pipsi);
 app.stage.eventMode = "dynamic";
 let prevX = 0;
 
+function restart() {
+  level = 1;
+  energyLevel = 1;
+  score = 0;
+  pipsi.x = app.screen.width / 2;
+  pipsi.y = app.screen.height / 2;
+  for (const carrot of carrots) {
+    carrot.destroy();
+  }
+  audio.currentTime = 0;
+  carrots = [];
+  startLevel();
+}
+
 app.stage.addEventListener("pointerdown", (event) => {
   if (isLevelCompleted) {
     level++;
     startLevel();
   } else if (energyLevel === 0) {
-    level = 1;
-    energyLevel = 1;
-    score = 0;
-    pipsi.x = app.screen.width / 2;
-    pipsi.y = app.screen.height / 2;
-    for (const carrot of carrots) {
-      carrot.destroy();
-    }
-    audio.currentTime = 0;
-    carrots = [];
-    startLevel();
+    restart();
   } else {
     prevX = event.global.x;
     // pause = !pause;
@@ -238,12 +267,26 @@ app.stage.addEventListener("pointerdown", (event) => {
 app.stage.on("pointermove", (event) => {
   const dx = event.global.x - prevX;
   prevX = event.global.x;
-  pipsi.rotation += (dx * Math.PI) / 180;
+  const angle = (dx * Math.PI) / 180;
+  pipsi.rotation += angle;
+  applyRotationCost(angle);
 });
+
+function onTired() {
+  showResult("Uff… I just got too tired!\nTap to try again");
+  audio.pause();
+}
+
+function applyRotationCost(angle: number) {
+  energyLevel = Math.max(0, energyLevel - angle * ROTATION_ENERGY_COST);
+  if (energyLevel === 0) {
+    onTired();
+  }
+}
 
 window.addEventListener("keydown", (e) => {
   if (isLevelCompleted) {
-    startLevel(app);
+    startLevel();
   }
   switch (e.code) {
     // case "ArrowUp":
@@ -255,17 +298,23 @@ window.addEventListener("keydown", (e) => {
     //   pipsi.y -= Math.sin(pipsi.rotation + Math.PI / 2) * 10;
     //   break;
     case "ArrowLeft":
-      pipsi.rotation -= Math.PI / 16;
+      pipsi.rotation -= KEYBOARD_ROTATION_ANGLE;
+      applyRotationCost(KEYBOARD_ROTATION_ANGLE);
       break;
     case "ArrowRight":
       pipsi.rotation += Math.PI / 16;
+      applyRotationCost(KEYBOARD_ROTATION_ANGLE);
       break;
     case "Space":
-      pause = !pause;
-      if (pause) {
-        audio.pause();
+      if (energyLevel === 0) {
+        restart();
       } else {
-        audio.play();
+        pause = !pause;
+        if (pause) {
+          audio.pause();
+        } else {
+          audio.play();
+        }
       }
       break;
   }
@@ -289,8 +338,7 @@ export function startGame(container: HTMLElement) {
     updateEnergyBar();
     energyLevel = Math.max(0, energyLevel - delta * speed * ENERGY_LOSS_FACTOR);
     if (energyLevel === 0) {
-      showResult("Uff… I just got too tired!\nTap to try again");
-      audio.pause();
+      onTired();
     }
 
     pipsi.x += Math.cos(pipsi.rotation + Math.PI / 2) * speed * delta;
