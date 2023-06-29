@@ -22,7 +22,7 @@ let levelText: PIXI.Text;
 let scoreText: PIXI.Text;
 let resultText: PIXI.Text;
 
-let maxScore = 0;
+let maxScore = Number(localStorage.getItem("maxScore")) || 0;
 let score = 0;
 let isLevelCompleted = false;
 
@@ -50,6 +50,7 @@ function checkCollision() {
       levelScore++;
       if (score > maxScore) {
         maxScore = score;
+        localStorage.setItem("maxScore", maxScore.toString());
       }
       updateScore();
     }
