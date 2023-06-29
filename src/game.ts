@@ -139,12 +139,12 @@ export function startGame(container: HTMLElement) {
     if (finished) {
       startNextLevel(app);
     } else {
-      pause = !pause;
-      if (pause) {
-        audio.pause();
-      } else {
-        audio.play();
-      }
+      // pause = !pause;
+      // if (pause) {
+      //   audio.pause();
+      // } else {
+      //   audio.play();
+      // }
     }
   });
   app.stage.on("pointermove", (event) => {
@@ -170,6 +170,14 @@ export function startGame(container: HTMLElement) {
         break;
       case "ArrowRight":
         pipsi.rotation += Math.PI / 16;
+        break;
+      case "Space":
+        pause = !pause;
+        if (pause) {
+          audio.pause();
+        } else {
+          audio.play();
+        }
         break;
     }
   });
