@@ -314,6 +314,7 @@ function applyRotationCost(angle: number) {
 
 window.addEventListener("keydown", (e) => {
   if (isLevelCompleted) {
+    level++;
     startLevel();
   }
   switch (e.code) {
