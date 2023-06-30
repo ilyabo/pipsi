@@ -35,6 +35,6 @@ container.innerHTML = `
 const startButton = document.querySelector<HTMLButtonElement>("#start");
 if (startButton) {
   startButton.addEventListener("click", () => {
-    startGame(container);
+    startGame();
   });
 }
