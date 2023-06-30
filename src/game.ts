@@ -287,6 +287,7 @@ app.stage.addEventListener("pointerdown", (event) => {
 });
 
 app.stage.on("pointermove", (event) => {
+  if (energyLevel === 0) return;
   const dx = event.global.x - prevX;
   prevX = event.global.x;
   const angle = (dx * Math.PI) / 180;
@@ -320,10 +321,12 @@ window.addEventListener("keydown", (e) => {
     //   pipsi.y -= Math.sin(pipsi.rotation + Math.PI / 2) * 10;
     //   break;
     case "ArrowLeft":
+      if (energyLevel === 0) return;
       pipsi.rotation -= KEYBOARD_ROTATION_ANGLE;
       applyRotationCost(KEYBOARD_ROTATION_ANGLE);
       break;
     case "ArrowRight":
+      if (energyLevel === 0) return;
       pipsi.rotation += Math.PI / 16;
       applyRotationCost(KEYBOARD_ROTATION_ANGLE);
       break;
