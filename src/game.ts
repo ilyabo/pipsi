@@ -6,6 +6,8 @@ let pipsi: PIXI.Sprite;
 let carrots: PIXI.Sprite[] = [];
 let level = 1;
 
+let screenArea: number;
+const IPHONE_12_SCREEN_AREA = 329160;
 let gameStarted = false;
 
 let pause = false;
@@ -18,7 +20,7 @@ const ENERGY_LOSS_FACTOR = 0.001;
 const ROTATION_ENERGY_COST = 0.01;
 const CARROT_SIGMA_FACTOR = 25;
 const CARROT_ENERGY_BOOST_FACTOR = 0.2;
-const ENERGY_BOOST_ON_LEVEL_COMPLETION = 0.3;
+const ENERGY_BOOST_ON_LEVEL_COMPLETION = 1.0;
 let levelScore = 0;
 let energyLevel = 1;
 const KEYBOARD_ROTATION_ANGLE = Math.PI / 16;
@@ -44,7 +46,10 @@ function checkCollision() {
       rectA.y < rectB.y + rectB.height
     ) {
       energyLevel = Math.min(
-        energyLevel + CARROT_ENERGY_BOOST_FACTOR * carrots[i].scale.x,
+        energyLevel +
+          CARROT_ENERGY_BOOST_FACTOR *
+            carrots[i].scale.x *
+            (screenArea / IPHONE_12_SCREEN_AREA),
         1
       );
       carrots[i].destroy();
@@ -349,6 +354,8 @@ export function startGame() {
   gameStarted = true;
   container.replaceChildren(app.view as unknown as Node);
   audio.play();
+  screenArea = app.screen.width * app.screen.height;
+  console.log("screenArea", screenArea);
 
   let tick = 0;
   // Listen for animate update
