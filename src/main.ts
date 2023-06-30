@@ -13,16 +13,20 @@ container.innerHTML = `
   />
 
   <section>
-  <h1>Hello, my name is Pipsi</h1>
+  <h2>My name is Pipsi</h2>
+
   <p>
-  I'm a plush guinea pig. 
+  
+    I'm a plush guinea pig. 
   
   I love carrots and I want to eat them all!
   But the longer I run for them, the more I get tired.
-
+  Help me to eat as many carrots as possible before I get tired.
   </p>
-  <p>  Help me to eat as many carrots as possible before I get tired.</p>
   <button id="start">START</button>
+  
+  <p>  </p>
+
   </section>
 `;
 

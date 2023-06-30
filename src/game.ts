@@ -1,19 +1,24 @@
 import * as PIXI from "pixi.js";
 import {randomNormal} from "d3-random";
 
+const container = document.querySelector<HTMLDivElement>("#app")!;
 let pipsi: PIXI.Sprite;
 let carrots: PIXI.Sprite[] = [];
 let level = 1;
 
+let gameStarted = false;
+
 let pause = false;
 let numCarrots = 7;
-let INITIAL_SPEED = 1;
+const PIPSI_SCALE = 0.35;
+const INITIAL_SPEED = 1;
 // let INITIAL_NUM_CARROTS = 7;
 let speed = INITIAL_SPEED;
 const ENERGY_LOSS_FACTOR = 0.001;
 const ROTATION_ENERGY_COST = 0.01;
 const CARROT_SIGMA_FACTOR = 25;
 const CARROT_ENERGY_BOOST_FACTOR = 0.2;
+const ENERGY_BOOST_ON_LEVEL_COMPLETION = 0.3;
 let levelScore = 0;
 let energyLevel = 1;
 const KEYBOARD_ROTATION_ANGLE = Math.PI / 16;
@@ -60,12 +65,29 @@ function checkCollision() {
 const audio = new Audio("control-seq.mp3");
 audio.loop = true;
 
+// Handle visibility change event
+function handleVisibilityChange() {
+  if (gameStarted) {
+    if (document.visibilityState === "hidden") {
+      // Tab is hidden, pause the audio
+      audio.pause();
+    } else {
+      // Tab is visible, resume playing the audio
+      audio.play();
+    }
+  }
+}
+
+// Attach visibility change event listener
+document.addEventListener("visibilitychange", handleVisibilityChange);
+
 function updateScore() {
   scoreText.text =
     "Score: " + score + (maxScore > score ? " (High: " + maxScore + ")" : "");
   if (levelScore === numCarrots) {
     showResult("Level completed!\nTap to continue");
     isLevelCompleted = true;
+    energyLevel = Math.min(1, energyLevel + ENERGY_BOOST_ON_LEVEL_COMPLETION);
     // audio.pause();
     // audio.currentTime = 0;
   }
@@ -140,7 +162,7 @@ function startLevel() {
 }
 
 const app = new PIXI.Application({
-  // antialias: true,
+  antialias: true,
   background: "#10909e",
   resizeTo: window,
 });
@@ -216,7 +238,7 @@ initCarrots(app);
 pipsi = PIXI.Sprite.from("pipsi-top-100.png");
 // center the sprite's anchor point
 pipsi.anchor.set(0.5);
-pipsi.scale.set(0.35);
+pipsi.scale.set(PIPSI_SCALE);
 pipsi.rotation += Math.PI;
 
 // move the sprite to the center of the screen
@@ -248,20 +270,19 @@ function restart() {
   startLevel();
 }
 
-app.stage.addEventListener("pointerdown", (event) => {
+resultText.eventMode = "dynamic";
+resultText.onpointerdown = () => {
   if (isLevelCompleted) {
     level++;
     startLevel();
   } else if (energyLevel === 0) {
     restart();
-  } else {
+  }
+};
+
+app.stage.addEventListener("pointerdown", (event) => {
+  if (!isLevelCompleted && energyLevel > 0) {
     prevX = event.global.x;
-    // pause = !pause;
-    // if (pause) {
-    //   audio.pause();
-    // } else {
-    //   audio.play();
-    // }
   }
 });
 
@@ -321,10 +342,12 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-export function startGame(container: HTMLElement) {
+export function startGame() {
+  gameStarted = true;
   container.replaceChildren(app.view as unknown as Node);
   audio.play();
 
+  let tick = 0;
   // Listen for animate update
   app.ticker.add((delta) => {
     if (pause) return;
@@ -337,6 +360,10 @@ export function startGame(container: HTMLElement) {
       return;
     }
     updateEnergyBar();
+
+    tick += delta;
+    // pipsi.scale.y = PIPSI_SCALE + Math.sin(tick * 0.1) * 0.02;
+
     energyLevel = Math.max(0, energyLevel - delta * speed * ENERGY_LOSS_FACTOR);
     if (energyLevel === 0) {
       onTired();
