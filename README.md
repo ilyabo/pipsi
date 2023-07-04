@@ -1,4 +1,4 @@
-# Pipsi Game
+# Traveling Guinea Pig Game
 
 One evening my 8 year old asked me to make a game with her plush guinea pig. Few hours later, this is what we came up with: 
 
