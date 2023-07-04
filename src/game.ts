@@ -88,7 +88,9 @@ document.addEventListener("visibilitychange", handleVisibilityChange);
 
 function updateScore() {
   scoreText.text =
-    "Score: " + score + (maxScore > score ? " (High: " + maxScore + ")" : "");
+    "Score: " +
+    score +
+    (maxScore > score ? " (High score: " + maxScore + ")" : "");
   if (levelScore === numCarrots) {
     showResult("Level completed!\nTap to continue");
     isLevelCompleted = true;
